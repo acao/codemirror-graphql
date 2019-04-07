@@ -12,6 +12,7 @@ import CodeMirror from 'codemirror';
 import {
   GraphQLEnumType,
   GraphQLInputObjectType,
+  GraphQLInputUnionType,
   GraphQLList,
   GraphQLNonNull,
   GraphQLScalarType,
@@ -88,6 +89,37 @@ function validateVariables(editor, variableToType, variablesAST) {
   return errors;
 }
 
+function validateInputObjectValue(type, valueAST) {
+  // Validate each field in the input object.
+  const providedFields = Object.create(null);
+  const fieldErrors = mapCat(valueAST.members, member => {
+    const fieldName = member.key.value;
+    providedFields[fieldName] = true;
+    const inputField = type.getFields()[fieldName];
+    if (!inputField) {
+      return [
+        [member.key, `Type "${type}" does not have a field "${fieldName}".`],
+      ];
+    }
+    const fieldType = inputField ? inputField.type : undefined;
+    return validateValue(fieldType, member.value);
+  });
+
+  // Look for missing non-nullable fields.
+  Object.keys(type.getFields()).forEach(fieldName => {
+    if (!providedFields[fieldName]) {
+      const fieldType = type.getFields()[fieldName].type;
+      if (fieldType instanceof GraphQLNonNull) {
+        fieldErrors.push([
+          valueAST,
+          `Object of type "${type}" is missing required field "${fieldName}".`,
+        ]);
+      }
+    }
+  });
+  return fieldErrors;
+}
+
 // Returns a list of validation errors in the form Array<[Node, String]>.
 function validateValue(type, valueAST) {
   // Validate non-nullable values.
@@ -117,35 +149,15 @@ function validateValue(type, valueAST) {
       return [[valueAST, `Type "${type}" must be an Object.`]];
     }
 
-    // Validate each field in the input object.
-    const providedFields = Object.create(null);
-    const fieldErrors = mapCat(valueAST.members, member => {
-      const fieldName = member.key.value;
-      providedFields[fieldName] = true;
-      const inputField = type.getFields()[fieldName];
-      if (!inputField) {
-        return [
-          [member.key, `Type "${type}" does not have a field "${fieldName}".`],
-        ];
-      }
-      const fieldType = inputField ? inputField.type : undefined;
-      return validateValue(fieldType, member.value);
-    });
+    return validateInputObjectValue(type, valueAST);
+  }
 
-    // Look for missing non-nullable fields.
-    Object.keys(type.getFields()).forEach(fieldName => {
-      if (!providedFields[fieldName]) {
-        const fieldType = type.getFields()[fieldName].type;
-        if (fieldType instanceof GraphQLNonNull) {
-          fieldErrors.push([
-            valueAST,
-            `Object of type "${type}" is missing required field "${fieldName}".`,
-          ]);
-        }
+  if (type instanceof GraphQLInputUnionType) {
+    Object.entries(type.getTypes()).forEach(([typeName, possibleType]) => {
+      if (possibleType.name === typeName) {
+        return validateInputObjectValue(possibleType, valueAST);
       }
     });
-
-    return fieldErrors;
   }
 
   // Validate common scalars.

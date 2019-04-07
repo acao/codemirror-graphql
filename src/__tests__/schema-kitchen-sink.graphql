@@ -17,6 +17,13 @@ type Foo implements Bar {
   four(argument: String = "string"): String
   five(argument: [String] = ["string", "string"]): String
   six(argument: InputType = {key: "value"}): Type
+  seven(
+    argument: InputUnionType = {
+      __inputname: "AltInputType",
+      key: "value",
+      question: "question?"
+    }
+  ): Type
 }
 
 type AnnotatedObject @onObject(arg: "value") {
@@ -54,6 +61,13 @@ input InputType {
   key: String!
   answer: Int = 42
 }
+
+input AltInputType {
+  key: String!
+  question: String!
+}
+
+inputUnion InputUnionType = InputType | AltInputType
 
 input AnnotatedInput @onInputObjectType {
   annotatedField: Type @onField

@@ -14,6 +14,7 @@ import {
   GraphQLInterfaceType,
   GraphQLEnumType,
   GraphQLInputObjectType,
+  GraphQLInputUnionType,
   GraphQLBoolean,
   GraphQLInt,
   GraphQLFloat,
@@ -48,6 +49,7 @@ const TestInputObject = new GraphQLInputObjectType({
     id: {type: GraphQLID},
     enum: {type: TestEnum},
     object: {type: TestInputObject},
+    inputUnion: {type: TestInputUnion},
     // List
     listString: {type: new GraphQLList(GraphQLString)},
     listInt: {type: new GraphQLList(GraphQLInt)},
@@ -103,6 +105,35 @@ const TestUnion = new GraphQLUnionType({
   },
 });
 
+const InputUnionFirst = new GraphQLInputObjectType({
+  name: 'InputUnionFirst',
+  fields: () => ({
+    scalar: {
+      type: GraphQLString,
+    },
+    first: {
+      type: TestInputObject,
+    },
+  }),
+});
+
+const InputUnionSecond = new GraphQLInputObjectType({
+  name: 'InputUnionSecond',
+  fields: () => ({
+    scalar: {
+      type: GraphQLString,
+    },
+    second: {
+      type: TestInputObject,
+    },
+  }),
+});
+
+const TestInputUnion = new GraphQLInputUnionType({
+  name: 'TestInputUnion',
+  types: [InputUnionFirst, InputUnionSecond],
+});
+
 const TestType = new GraphQLObjectType({
   name: 'Test',
   fields: () => ({
@@ -146,6 +177,7 @@ const TestType = new GraphQLObjectType({
         id: {type: GraphQLID},
         enum: {type: TestEnum},
         object: {type: TestInputObject},
+        inputUnion: {type: TestInputUnion},
         // List
         listString: {type: new GraphQLList(GraphQLString)},
         listInt: {type: new GraphQLList(GraphQLInt)},
@@ -168,6 +200,7 @@ const TestMutationType = new GraphQLObjectType({
       description: 'Set the string field',
       args: {
         value: {type: GraphQLString},
+        inputUnionValue: {type: GraphQLInputUnionType},
       },
     },
   },
@@ -204,6 +237,7 @@ const OnAllDefsDirective = new GraphQLDirective({
     DirectiveLocation.ENUM,
     DirectiveLocation.ENUM_VALUE,
     DirectiveLocation.INPUT_OBJECT,
+    DirectiveLocation.INPUT_UNION,
     DirectiveLocation.ARGUMENT_DEFINITION,
     DirectiveLocation.INPUT_FIELD_DEFINITION,
   ],
